@@ -1,0 +1,689 @@
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>4-Dars: Bir Zumda - Django Integratsiyasi</title>
+
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800;900&family=Fira+Code:wght@400;500;600&display=swap" rel="stylesheet">
+
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        'brand-blue': '#3034A6',
+                        'brand-orange': '#FF6B00',
+                        'brand-dark': '#111827',
+                        'django-green': '#0C4B33',
+                        'django-light': '#44B78B',
+                        'jinja-red': '#B41717',
+                        'front-blue': '#38BDF8',
+                        'folder-yellow': '#FBBF24',
+                        'pdp-cyan': '#00D1D1',
+                        'pdp-dark': '#0F172A',
+                    },
+                    fontFamily: {
+                        sans: ['Montserrat', 'sans-serif'],
+                        mono: ['Fira Code', 'monospace'],
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        body { font-family: 'Montserrat', sans-serif; background-color: #f8fafc; overflow: hidden; }
+
+        /* Slider Layout */
+        .slider-window { width: 100%; height: calc(100vh - 80px); position: relative; overflow: hidden; }
+        .slides-wrapper { display: flex; width: 100%; height: 100%; transition: transform 0.6s cubic-bezier(0.65, 0, 0.35, 1); }
+        .slide { min-width: 100%; height: 100%; display: flex; flex-direction: column; align-items: center; padding: 3rem 2rem; box-sizing: border-box; overflow-y: auto; overflow-x: hidden; }
+        .slide::before, .slide::after { content: ''; margin: auto; }
+
+        /* Animations */
+        @keyframes float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-15px); } }
+        .animate-float { animation: float 3s ease-in-out infinite; }
+        @keyframes slideUp { from { opacity: 0; transform: translateY(30px); } to { opacity: 1; transform: translateY(0); } }
+        .animate-slide-up { animation: slideUp 0.8s forwards; opacity: 0; }
+
+        @keyframes broken-code {
+            0% { opacity: 1; transform: skewX(0deg); }
+            25% { opacity: 0.8; transform: skewX(-2deg); filter: grayscale(50%); }
+            50% { opacity: 1; transform: skewX(2deg); filter: grayscale(100%); }
+            75% { opacity: 0.9; transform: skewX(0deg); filter: blur(1px); }
+            100% { opacity: 1; transform: skewX(0deg); }
+        }
+        .animate-broken { animation: broken-code 3s infinite; font-family: 'Times New Roman', Times, serif; }
+
+        @keyframes pulse-link {
+            0% { transform: scale(1); opacity: 0.6; }
+            50% { transform: scale(1.1); opacity: 1; color: #FF6B00; }
+            100% { transform: scale(1); opacity: 0.6; }
+        }
+        .animate-pulse-link { animation: pulse-link 2s infinite; }
+
+        /* Scrollbar */
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.2); border-radius: 10px; }
+
+        /* Logo Fixed */
+        .brand-logo-fixed { position: fixed; top: 15px; left: 24px; z-index: 100; display: flex; align-items: center; gap: 8px; }
+
+        /* Syntax Highlighting */
+        .code-keyword { color: #CC7832; font-weight: bold; }
+        .code-string { color: #6A8759; }
+        .code-func { color: #FFC66D; }
+        .code-bracket { color: #A9B7C6; }
+        .code-dtl { color: #E8BF6A; font-weight: bold; }
+        .code-comment { color: #808080; font-style: italic; }
+
+        /* Grid Pattern */
+        .bg-grid-pattern { background-image: radial-gradient(rgba(255,255,255,0.1) 1px, transparent 1px); background-size: 20px 20px; }
+    </style>
+</head>
+<body class="flex flex-col h-screen overflow-hidden text-brand-dark relative">
+
+    <!-- Toast Notification -->
+    <div id="copy-toast" class="fixed top-24 left-1/2 transform -translate-x-1/2 bg-green-500 text-white px-6 py-2 rounded shadow-lg font-bold opacity-0 transition-opacity duration-300 pointer-events-none z-50">
+        Nusxa olindi!
+    </div>
+
+    <!-- Header Logo (PDP Junior) -->
+    <div class="brand-logo-fixed">
+        <div class="w-10 h-10 bg-pdp-cyan rounded-full flex items-center justify-center relative shadow-md">
+            <div class="w-6 h-3 bg-pdp-dark rounded-full flex items-center justify-center">
+                <span class="text-[6px] text-pdp-cyan font-bold leading-none mt-[1px]">&gt;_</span>
+            </div>
+        </div>
+        <div class="flex flex-col leading-none ml-2">
+            <span class="font-black text-xl tracking-tighter text-gray-800">PDP</span>
+            <span class="text-pdp-cyan font-bold text-xs tracking-widest mt-[-2px] uppercase">Junior</span>
+        </div>
+    </div>
+
+    <!-- Controls -->
+    <header class="h-[80px] w-full flex items-center justify-end px-12 bg-white/90 backdrop-blur-md z-50 shrink-0 border-b border-gray-200 shadow-sm relative">
+        <div class="flex gap-4 items-center">
+            <button id="btn-prev" class="w-10 h-10 rounded-full border border-gray-300 text-gray-500 hover:border-brand-blue hover:text-brand-blue flex items-center justify-center transition-all shadow-sm bg-white"><i class="fas fa-chevron-left"></i></button>
+            <span id="slide-counter" class="text-sm font-bold text-gray-600 font-mono bg-gray-100 px-4 py-1.5 rounded-full border border-gray-200">1 / 12</span>
+            <button id="btn-next" class="w-10 h-10 rounded-full bg-brand-orange text-white shadow-lg shadow-orange-500/40 flex items-center justify-center hover:bg-orange-600 transition-all hover:scale-105"><i class="fas fa-chevron-right"></i></button>
+        </div>
+    </header>
+
+    <main class="slider-window" id="touchArea">
+        <div class="slides-wrapper" id="slidesWrapper">
+
+            <!-- Slide 1: Intro -->
+            <div class="slide bg-slate-900 relative">
+                <div class="absolute inset-0 bg-brand-blue/20 bg-grid-pattern"></div>
+                <div class="absolute w-[500px] h-[500px] bg-brand-blue rounded-full opacity-30 blur-[100px] top-10 right-10 animate-float"></div>
+                <div class="absolute w-[400px] h-[400px] bg-brand-orange rounded-full opacity-20 blur-[100px] bottom-10 left-10 animate-float" style="animation-delay: 2s;"></div>
+
+                <div class="max-w-4xl text-center relative z-10 flex flex-col items-center">
+                    <span class="inline-block px-6 py-2 rounded-full bg-brand-orange/20 text-brand-orange font-black tracking-widest uppercase mb-6 border border-brand-orange/30">4-Dars | Amaliyot</span>
+
+                    <h1 class="text-5xl md:text-7xl font-black text-white tracking-tighter mb-6 leading-tight">
+                        "Bir Zumda" loyihasini <br>
+                        <span class="text-transparent bg-clip-text bg-gradient-to-r from-django-light via-brand-blue to-brand-orange">Django-ga Ulash</span>
+                    </h1>
+
+                    <p class="text-xl text-gray-300 font-medium max-w-2xl mt-4 leading-relaxed mb-10">Bugungi darsda tayyor E-commerce shablonini haqiqiy ishlaydigan Backend tizimiga aylantiramiz.</p>
+
+                    <div class="flex items-center gap-6">
+                        <div class="w-20 h-20 bg-white/10 rounded-2xl flex items-center justify-center border border-white/20"><i class="fab fa-html5 text-5xl text-orange-500"></i></div>
+                        <i class="fas fa-plus text-2xl text-white"></i>
+                        <div class="w-20 h-20 bg-white/10 rounded-2xl flex items-center justify-center border border-white/20"><i class="fab fa-css3-alt text-5xl text-blue-500"></i></div>
+                        <i class="fas fa-arrow-right text-3xl text-brand-orange animate-pulse mx-4"></i>
+                        <div class="w-24 h-24 bg-django-green/40 rounded-full flex items-center justify-center border-4 border-django-light shadow-[0_0_30px_rgba(68,183,139,0.5)]"><i class="fab fa-python text-6xl text-white"></i></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Slide 2: Template Showcase (Home) -->
+            <div class="slide bg-white">
+                <div class="max-w-6xl w-full text-center flex flex-col items-center">
+                    <div class="inline-block px-4 py-1 rounded-full bg-blue-100 text-brand-blue font-bold text-xs tracking-widest uppercase mb-3 border border-blue-200">1-Qadam</div>
+                    <h2 class="text-4xl font-black text-brand-dark mb-4">Bizdagi Tayyor Frontend Shablon</h2>
+                    <p class="text-gray-500 text-lg mb-8">Bizga shunday chiroyli HTML/CSS shablon berildi. Uni Djangoga qanday joylaymiz?</p>
+
+                    <!-- Mockup of 'Bir Zumda' Home Page -->
+                    <div class="w-full bg-white rounded-2xl shadow-[0_20px_50px_rgba(0,0,0,0.1)] border border-gray-200 overflow-hidden animate-slide-up">
+                        <!-- Navbar -->
+                        <div class="flex justify-between items-center px-8 py-4 border-b border-gray-100">
+                            <div class="flex items-center gap-2 text-xl font-black text-gray-800"><i class="fas fa-bolt text-brand-orange"></i> Bir Zumda</div>
+                            <div class="hidden md:flex gap-6 text-[14px] font-bold text-gray-500">
+                                <span class="text-brand-blue border-b-2 border-brand-blue pb-1">Bosh sahifa</span>
+                                <span>Mahsulotlar</span>
+                                <span>Blog</span>
+                                <span>Biz haqimizda</span>
+                            </div>
+                            <div class="flex gap-4 text-gray-600">
+                                <i class="fas fa-moon"></i> <i class="fas fa-search"></i> <i class="fas fa-user"></i>
+                                <div class="relative"><i class="fas fa-shopping-cart"></i><span class="absolute -top-2 -right-2 bg-brand-orange text-white text-[8px] px-1 rounded-full">0</span></div>
+                            </div>
+                        </div>
+
+                        <!-- Hero Section -->
+                        <div class="p-8 pb-16 bg-gray-50">
+                            <div class="bg-brand-blue rounded-3xl p-10 flex flex-col md:flex-row items-center justify-between text-left relative overflow-hidden h-[300px]">
+                                <!-- Grid BG for Hero -->
+                                <div class="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAiIGhlaWdodD0iMjAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PHBhdGggZD0iTTEgMWgyMHYyMEgxVjF6IiBmaWxsPSJub25lIiBzdHJva2U9InJnYmEoMjU1LDI1NSwyNTUsMC4wNSkiLz48L3N2Zz4=')]"></div>
+
+                                <div class="relative z-10 max-w-xl">
+                                    <h1 class="text-4xl md:text-5xl font-black text-white mb-4 leading-tight">Zamonaviy texnika <span class="text-brand-orange">Bir Zumda</span> uyingizda!</h1>
+                                    <p class="text-blue-100 text-sm mb-6 leading-relaxed">Eng so'nggi rusumdagi smartfonlar, noutbuklar va maishiy texnikalarni qulay narxlarda va rasmiy kafolat bilan xarid qiling.</p>
+                                    <button class="bg-brand-orange text-white font-bold px-6 py-3 rounded-lg flex items-center gap-2 hover:bg-orange-600">Mahsulotlarga o'tish <i class="fas fa-arrow-right"></i></button>
+                                </div>
+                                <div class="relative z-10 hidden md:block">
+                                    <div class="w-64 h-64 bg-white/10 rounded-full flex items-center justify-center backdrop-blur-sm border border-white/20">
+                                        <i class="fas fa-laptop text-6xl text-white shadow-2xl drop-shadow-2xl transform -rotate-12"></i>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Features Cards -->
+                            <div class="flex flex-wrap justify-center gap-4 -mt-10 relative z-20">
+                                <div class="bg-white p-5 rounded-2xl shadow-lg border border-gray-100 w-56 text-center">
+                                    <div class="w-12 h-12 bg-blue-50 text-brand-blue rounded-full flex items-center justify-center mx-auto mb-3"><i class="fas fa-rocket"></i></div>
+                                    <h4 class="font-bold text-sm text-gray-800">Tezkor yetkazib berish</h4>
+                                    <p class="text-[10px] text-gray-500 mt-1">2 soat ichida yetkaziladi</p>
+                                </div>
+                                <div class="bg-white p-5 rounded-2xl shadow-lg border border-gray-100 w-56 text-center">
+                                    <div class="w-12 h-12 bg-blue-50 text-brand-blue rounded-full flex items-center justify-center mx-auto mb-3"><i class="fas fa-shield-alt"></i></div>
+                                    <h4 class="font-bold text-sm text-gray-800">Rasmiy kafolat</h4>
+                                    <p class="text-[10px] text-gray-500 mt-1">1-3 yillik kafolat</p>
+                                </div>
+                                <div class="bg-white p-5 rounded-2xl shadow-lg border border-gray-100 w-56 text-center">
+                                    <div class="w-12 h-12 bg-blue-50 text-brand-blue rounded-full flex items-center justify-center mx-auto mb-3"><i class="fas fa-wallet"></i></div>
+                                    <h4 class="font-bold text-sm text-gray-800">Muddatli to'lov</h4>
+                                    <p class="text-[10px] text-gray-500 mt-1">Boshlang'ich to'lovsiz</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Slide 3: File Structure -->
+            <div class="slide bg-gray-50">
+                <h2 class="text-4xl font-black mb-3 text-center text-brand-dark"><span class="bg-folder-yellow text-brand-dark px-4 py-1 rounded-xl mr-3 shadow text-2xl">2-Qadam</span>Fayllarni Joylash</h2>
+                <p class="text-gray-500 text-center mb-10 text-lg">Django o'zining qat'iy tartibini yoqtiradi. Biz barcha <code>.html</code> fayllarni <b class="text-orange-500">templates</b> ga, <code>assets</code> papkasini esa <b class="text-blue-500">static</b> ga solamiz!</p>
+
+                <div class="flex flex-col md:flex-row gap-12 items-center w-full max-w-4xl animate-slide-up">
+
+                    <!-- Original Folder -->
+                    <div class="bg-[#282C34] p-6 rounded-xl shadow-2xl border border-gray-700 w-80 font-mono text-sm text-gray-300">
+                        <div class="flex items-center gap-2 font-bold text-white mb-4 border-b border-gray-600 pb-2"><i class="fas fa-chevron-down text-xs"></i><i class="fas fa-folder text-blue-400"></i> bir-zumda-online-shopping</div>
+                        <ul class="space-y-2.5 pl-4">
+                            <li class="flex items-center gap-2"><i class="fas fa-chevron-down text-xs"></i><i class="fas fa-folder text-gray-400"></i> assets</li>
+                            <ul class="pl-6 space-y-1.5 mt-1">
+                                <li class="flex items-center gap-2"><i class="fas fa-chevron-right text-xs"></i><i class="fas fa-folder text-gray-400"></i> css</li>
+                                <li class="flex items-center gap-2"><i class="fas fa-chevron-right text-xs"></i><i class="fas fa-folder text-gray-400"></i> js</li>
+                            </ul>
+                            <li class="flex items-center gap-2 text-[#E5C07B]"><i class="fas fa-code"></i> aloqa.html</li>
+                            <li class="flex items-center gap-2 text-[#E5C07B]"><i class="fas fa-code"></i> biz-haqimizda.html</li>
+                            <li class="flex items-center gap-2 text-[#E5C07B]"><i class="fas fa-code"></i> blog.html</li>
+                            <li class="flex items-center gap-2 text-[#E5C07B]"><i class="fas fa-code"></i> index.html</li>
+                            <li class="flex items-center gap-2 text-[#E5C07B]"><i class="fas fa-code"></i> mahsulotlar.html</li>
+                            <li class="text-gray-500 text-xs italic pl-6">...boshqa fayllar</li>
+                        </ul>
+                    </div>
+
+                    <div class="text-4xl text-brand-orange flex flex-col items-center">
+                        <i class="fas fa-exchange-alt rotate-90 md:rotate-0 mb-2"></i>
+                        <span class="text-sm font-bold bg-orange-100 text-orange-600 px-3 py-1 rounded-full">Django</span>
+                    </div>
+
+                    <!-- Django Structure -->
+                    <div class="flex flex-col gap-6 w-80">
+                        <div class="bg-white p-5 rounded-xl shadow-lg border-2 border-orange-400 relative">
+                            <div class="absolute -top-3 right-4 bg-orange-400 text-white text-xs font-bold px-3 py-1 rounded shadow">Faqat HTML</div>
+                            <h3 class="font-bold text-gray-800 flex items-center gap-2 mb-2"><i class="fas fa-folder text-folder-yellow"></i> templates/</h3>
+                            <ul class="font-mono text-[13px] text-orange-600 pl-6 border-l-2 border-orange-100 space-y-1">
+                                <li>index.html</li>
+                                <li>mahsulotlar.html</li>
+                                <li>blog.html ...</li>
+                            </ul>
+                        </div>
+                        <div class="bg-white p-5 rounded-xl shadow-lg border-2 border-brand-blue relative">
+                            <div class="absolute -top-3 right-4 bg-brand-blue text-white text-xs font-bold px-3 py-1 rounded shadow">CSS, JS, Rasmlar</div>
+                            <h3 class="font-bold text-gray-800 flex items-center gap-2 mb-2"><i class="fas fa-folder text-folder-yellow"></i> static/ <span class="text-gray-400 font-normal text-xs">(oldin assets)</span></h3>
+                            <ul class="font-mono text-[13px] text-brand-blue pl-6 border-l-2 border-blue-100 space-y-1">
+                                <li>css/</li>
+                                <li>js/</li>
+                                <li>images/</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Slide 4: settings.py -->
+            <div class="slide bg-[#1E1F22]">
+                <h2 class="text-4xl font-black mb-2 text-center text-white"><span class="bg-django-light text-brand-dark px-4 py-1 rounded text-2xl mr-3 font-mono">3-Qadam</span>settings.py sozlamalari</h2>
+                <p class="text-gray-400 text-center mb-8 max-w-2xl">Djangoga loyihadagi <b>static</b> (bizning fayllar) va <b>media</b> (rasmlar yuklanadigan joy) qayerda ekanligini aytishimiz kerak.</p>
+
+                <div class="w-full max-w-4xl bg-[#2B2D30] rounded-xl border border-[#43454A] shadow-2xl overflow-hidden animate-slide-up">
+                    <div class="bg-[#3C3F41] px-4 py-2 border-b border-[#242527] flex justify-between items-center">
+                        <div class="flex gap-3 items-center">
+                            <div class="flex gap-1.5"><div class="w-3 h-3 rounded-full bg-[#FF5F56]"></div><div class="w-3 h-3 rounded-full bg-[#FFBD2E]"></div><div class="w-3 h-3 rounded-full bg-[#27C93F]"></div></div>
+                            <span class="text-[#A9B7C6] text-xs font-mono ml-2">core/settings.py</span>
+                        </div>
+                        <button onclick="copyCode()" class="text-gray-300 hover:text-white text-sm"><i class="far fa-copy"></i> Nusxalash</button>
+                    </div>
+                    <div class="p-6 font-mono text-[15px] leading-loose text-[#A9B7C6]">
+                        <div class="code-keyword mb-4">import <span class="text-white">os</span></div>
+
+                        <div class="code-comment"># Static files (CSS, JavaScript, Images)</div>
+                        <div class="bg-blue-500/10 border-l-4 border-blue-500 pl-4 py-2 mb-6">
+                            <span class="code-func">STATIC_URL</span> = <span class="code-string">'static/'</span><br>
+                            <span class="code-func">STATICFILES_DIRS</span> = [os.path.join(BASE_DIR, <span class="code-string">'static'</span>)]
+                        </div>
+
+                        <div class="code-comment"># Media files (Foydalanuvchilar va Admin yuklaydigan rasmlar)</div>
+                        <div class="bg-purple-500/10 border-l-4 border-purple-500 pl-4 py-2">
+                            <span class="code-func">MEDIA_URL</span> = <span class="code-string">'media/'</span><br>
+                            <span class="code-func">MEDIA_ROOT</span> = os.path.join(BASE_DIR, <span class="code-string">'media'</span>)
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Slide 5: urls.py -->
+            <div class="slide bg-slate-800">
+                <h2 class="text-4xl font-black mb-3 text-center text-white"><span class="bg-django-light text-brand-dark px-4 py-1 rounded text-2xl mr-3 font-mono">4-Qadam</span>urls.py da fayllarni ochish</h2>
+                <p class="text-gray-400 text-center mb-10 text-lg max-w-3xl">Fayllar joyini ko'rsatdik, lekin Django ruxsatsiz ularni brauzerga bermaydi. URL oxiriga <code>+ static(...)</code> qoamoq shart!</p>
+
+                <div class="w-full max-w-4xl bg-[#1E1F22] rounded-xl border border-[#43454A] shadow-2xl overflow-hidden animate-slide-up">
+                    <div class="p-6 font-mono text-[15px] leading-loose text-[#A9B7C6]">
+                        <span class="code-keyword">from</span> django.conf <span class="code-keyword">import</span> settings<br>
+                        <span class="code-keyword">from</span> django.conf.urls.static <span class="code-keyword">import</span> static<br><br>
+
+                        <span class="text-white">urlpatterns</span> = [<br>
+                        <span class="pl-8">path(<span class="code-string">'admin/'</span>, admin.site.urls),</span><br>
+                        <span class="pl-8">path(<span class="code-string">''</span>, include(<span class="code-string">'store.urls'</span>)),</span><br>
+                        ] <span class="bg-brand-orange/20 text-orange-400 font-bold px-2 py-1 border border-orange-500/50 rounded inline-block mt-2 shadow-[0_0_15px_rgba(249,115,22,0.3)]">
+                            + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+                        </span>
+                        <div class="text-gray-500 mt-4 code-comment"># Ushbu qator bazadan kelayotgan (mahsulot) rasmlarni brauzerda ko'rsatishga ruxsat beradi!</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Slide 6: The Broken Site -->
+            <div class="slide bg-white">
+                <div class="text-center mb-8">
+                    <span class="bg-red-100 text-red-600 px-4 py-1.5 rounded-full font-bold text-sm tracking-widest uppercase border border-red-200"><i class="fas fa-bug mr-2"></i>XATOLIK</span>
+                    <h2 class="text-4xl font-black mt-4 text-brand-dark">5-Qadam: Run qilsak nima bo'ladi?</h2>
+                    <p class="text-gray-500 mt-2 text-lg">Server ishladi, HTML ochildi, lekin sayt dizayni "sinib" qoldi. Nega?</p>
+                </div>
+
+                <!-- Broken UI Mockup -->
+                <div class="w-full max-w-3xl border-4 border-red-400 rounded-xl overflow-hidden shadow-lg animate-slide-up flex flex-col">
+                    <div class="bg-red-500 text-white text-center py-2 font-bold uppercase text-sm">Haqiqat (CSS va Rasmlar yo'q)</div>
+                    <div class="p-8 bg-white text-black animate-broken h-[350px] overflow-hidden">
+                        <h1 class="text-3xl font-bold mb-4">Bir Zumda</h1>
+                        <ul class="text-blue-600 underline mb-6 flex gap-4 text-sm">
+                            <li>Bosh sahifa</li> <li>Mahsulotlar</li> <li>Blog</li>
+                        </ul>
+                        <h2 class="text-2xl font-bold mb-2">Zamonaviy texnika Bir Zumda uyingizda!</h2>
+                        <p class="mb-4">Eng so'nggi rusumdagi smartfonlar...</p>
+                        <button class="border border-black px-4 py-1 bg-gray-200">Mahsulotlarga o'tish -></button>
+
+                        <div class="mt-6 border border-gray-400 p-4 text-center text-gray-500 w-48">
+                            [Rasm topilmadi]
+                        </div>
+                    </div>
+                </div>
+
+                <div class="mt-6 bg-orange-50 border-l-4 border-brand-orange p-4 max-w-3xl text-gray-700 text-sm shadow-sm rounded-r-lg">
+                    <b>Sabab:</b> HTML kodida CSS va rasmlar <code>assets/css/style.css</code> deb qolgan. Djangoda har bir resurs uchun <code>static</code> deb maxsus murojaat qilish shart!
+                </div>
+            </div>
+
+            <!-- Slide 7: Fixing with Jinja -->
+            <div class="slide bg-[#1E1F22]">
+                <h2 class="text-4xl font-black mb-3 text-center text-white"><span class="bg-green-500 text-white px-4 py-1 rounded-xl mr-3 shadow"><i class="fas fa-wrench mr-2"></i>Tuzatish</span>6-Qadam: Jinja ulaymiz</h2>
+                <p class="text-gray-400 text-center mb-8">Barcha eski manzillarni Django (Jinja) teglariga almashtiramiz.</p>
+
+                <div class="w-full max-w-4xl bg-[#2B2D30] rounded-xl shadow-2xl border border-[#43454A] overflow-hidden animate-slide-up">
+                    <div class="p-6 font-mono text-[15px] leading-relaxed text-[#A9B7C6]">
+
+                        <div class="bg-jinja-red/20 -mx-6 px-6 py-2 mb-4 border-l-4 border-jinja-red">
+                            <span class="code-dtl text-jinja-red">{% load static %}</span> <span class="text-gray-500 ml-4"># HTML faylning eng tepasiga qo'shish shart!</span>
+                        </div>
+
+                        <span class="code-bracket">&lt;!DOCTYPE</span> <span class="text-front-blue">html</span><span class="code-bracket">&gt;</span><br>
+                        <span class="code-bracket">&lt;</span><span class="text-front-blue">head</span><span class="code-bracket">&gt;</span><br>
+
+                        <div class="pl-8 mt-2">
+                            <span class="code-comment">&lt;!-- XATO (Eskisi): &lt;link rel="stylesheet" href="assets/css/style.css"&gt; --&gt;</span><br>
+                            <span class="code-comment">&lt;!-- TO'G'RI (Yangisi): --&gt;</span><br>
+                            <div class="bg-blue-500/10 -ml-4 pl-4 py-1 border-l-2 border-blue-500">
+                                <span class="code-bracket">&lt;</span><span class="text-front-blue">link</span> <span class="text-green-400">rel</span><span class="code-bracket">=</span><span class="code-string">"stylesheet"</span> <span class="text-green-400">href</span><span class="code-bracket">=</span><span class="code-string">"</span><span class="text-yellow-400 font-bold">{% static 'css/style.css' %}</span><span class="code-string">"</span><span class="code-bracket">&gt;</span>
+                            </div>
+                        </div>
+                        <span class="code-bracket">&lt;/</span><span class="text-front-blue">head</span><span class="code-bracket">&gt;</span><br>
+                        <span class="code-bracket">&lt;</span><span class="text-front-blue">body</span><span class="code-bracket">&gt;</span><br>
+
+                        <div class="pl-8 mt-2 mb-2">
+                            <span class="code-comment">&lt;!-- Rasm ulash --&gt;</span><br>
+                            <div class="bg-blue-500/10 -ml-4 pl-4 py-1 border-l-2 border-blue-500">
+                                <span class="code-bracket">&lt;</span><span class="text-front-blue">img</span> <span class="text-green-400">src</span><span class="code-bracket">=</span><span class="code-string">"</span><span class="text-yellow-400 font-bold">{% static 'images/logo.png' %}</span><span class="code-string">"</span><span class="code-bracket">&gt;</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Slide 8: Independent Work 1 (Products Page CSS/Links) -->
+            <div class="slide bg-blue-50">
+                <div class="text-center mb-6">
+                    <span class="bg-brand-blue text-white px-6 py-2 rounded-full font-bold tracking-widest text-sm shadow-md"><i class="fas fa-bolt mr-2"></i> 7-QADAM: MUSTAQIL ISH 1</span>
+                    <h2 class="text-4xl font-black mt-4 text-brand-dark">"Mahsulotlar" sahifasini tiklang!</h2>
+                    <p class="text-gray-500 mt-2 text-lg max-w-3xl mx-auto">Siz <code>index.html</code> ni to'g'irladingiz. Endi xuddi shu usulda <b>mahsulotlar.html</b> sahifasidagi CSS/rasmlarni <code>{% static %}</code> yordamida ulab, dizaynni rasmdagidek tiklang.</p>
+                </div>
+
+                <!-- Products Page Mockup -->
+                <div class="w-full max-w-5xl bg-white rounded-xl shadow-xl border border-gray-200 p-6 flex gap-6 animate-slide-up">
+
+                    <!-- Sidebar -->
+                    <div class="w-1/4 bg-gray-50 rounded-lg p-5 border border-gray-100 hidden md:block">
+                        <h3 class="font-bold text-lg mb-4 text-gray-800">Toifalar</h3>
+                        <div class="space-y-3 mb-8">
+                            <label class="flex items-center gap-3 text-brand-blue font-medium"><input type="radio" checked class="accent-brand-blue w-4 h-4"> Barchasi</label>
+                            <label class="flex items-center gap-3 text-gray-500"><input type="radio" class="w-4 h-4"> Smartfonlar</label>
+                            <label class="flex items-center gap-3 text-gray-500"><input type="radio" class="w-4 h-4"> Noutbuklar</label>
+                            <label class="flex items-center gap-3 text-gray-500"><input type="radio" class="w-4 h-4"> Televizorlar</label>
+                        </div>
+                        <h3 class="font-bold text-lg mb-4 text-gray-800">Brendlar</h3>
+                        <div class="space-y-3">
+                            <label class="flex items-center gap-3 text-gray-500"><input type="checkbox" class="w-4 h-4"> Apple</label>
+                            <label class="flex items-center gap-3 text-gray-500"><input type="checkbox" class="w-4 h-4"> Samsung</label>
+                        </div>
+                    </div>
+
+                    <!-- Main Content -->
+                    <div class="flex-1">
+                        <!-- Top Bar -->
+                        <div class="flex justify-between items-center bg-gray-50 p-3 rounded-lg border border-gray-100 mb-6">
+                            <div class="flex items-center gap-2 text-gray-400 w-1/2 bg-white px-4 py-2 rounded border border-gray-200"><i class="fas fa-search"></i> Model yoki nomini...</div>
+                            <select class="bg-white border border-gray-200 px-4 py-2 rounded text-gray-600 outline-none"><option>Ommabopligi</option></select>
+                        </div>
+
+                        <!-- Product Grid -->
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <!-- Card 1 -->
+                            <div class="border border-gray-100 rounded-xl p-4 shadow-sm relative hover:shadow-md transition bg-white">
+                                <span class="absolute top-4 left-4 bg-brand-orange text-white text-xs font-bold px-2 py-1 rounded">Top</span>
+                                <button class="absolute top-4 right-4 text-gray-300 hover:text-red-500"><i class="far fa-heart"></i></button>
+                                <div class="h-32 bg-[#2A2A2A] rounded-lg mb-4 flex items-center justify-center">
+                                    <span class="text-white font-bold text-xl">iPhone 15</span>
+                                </div>
+                                <p class="text-[10px] text-brand-blue font-bold uppercase mb-1">Smartfonlar</p>
+                                <h4 class="font-bold text-sm text-gray-800 mb-2 leading-tight">Apple iPhone 15 Pro Max 256GB Natural Titanium</h4>
+                                <div class="text-brand-orange text-xs mb-3"><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i></div>
+                                <div class="flex justify-between items-end mt-auto">
+                                    <div>
+                                        <p class="text-[10px] text-gray-400 line-through">15,200,000 so'm</p>
+                                        <p class="font-black text-lg text-brand-dark">14,500,000 so'm</p>
+                                    </div>
+                                    <button class="bg-brand-blue text-white w-8 h-8 rounded-lg flex items-center justify-center hover:bg-blue-700"><i class="fas fa-shopping-cart"></i></button>
+                                </div>
+                            </div>
+                            <!-- Card 2 -->
+                            <div class="border border-gray-100 rounded-xl p-4 shadow-sm relative bg-white">
+                                <span class="absolute top-4 left-4 bg-red-500 text-white text-xs font-bold px-2 py-1 rounded">Chegirma</span>
+                                <div class="h-32 bg-gray-800 rounded-lg mb-4 flex items-center justify-center text-white">Smart TV</div>
+                                <p class="text-[10px] text-brand-blue font-bold uppercase mb-1">Televizorlar</p>
+                                <h4 class="font-bold text-sm text-gray-800 mb-2 leading-tight">Samsung 65' Crystal 4K UHD Smart TV</h4>
+                                <div class="text-brand-orange text-xs mb-3"><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i></div>
+                                <div class="flex justify-between items-end mt-auto">
+                                    <div>
+                                        <p class="font-black text-lg text-brand-dark">8,200,000 so'm</p>
+                                    </div>
+                                    <button class="bg-brand-blue text-white w-8 h-8 rounded-lg flex items-center justify-center"><i class="fas fa-shopping-cart"></i></button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="mt-4 bg-white px-6 py-3 rounded-xl shadow-sm border-l-4 border-brand-blue flex gap-4 items-center">
+                    <i class="fas fa-link text-brand-blue text-xl"></i>
+                    <p class="text-sm text-gray-600">Dizaynni tiklagach, <b>Bosh sahifa</b> dan <b>Mahsulotlar</b> ga o'tish uchun navbar da <code>&lt;a href="{% url 'products' %}"&gt;</code> bog'lashni unutmang!</p>
+                </div>
+            </div>
+
+            <!-- Slide 9: Dynamic DB Data -->
+            <div class="slide bg-[#1E1F22]">
+                <h2 class="text-4xl font-black mb-3 text-center text-white"><span class="bg-django-light text-brand-dark px-4 py-1 rounded text-2xl mr-3 font-mono">8-Qadam</span>Mahsulotlarni Bazadan Chiqarish</h2>
+                <p class="text-gray-400 text-center mb-8 max-w-3xl">HTML dagi o'nlab statik kartochkalarni o'chirib, o'rniga faqat <b>bitta</b> kartochka qoldiramiz va uni <code>{% for %}</code> sikli bilan aylantiramiz.</p>
+
+                <div class="w-full max-w-4xl bg-[#2B2D30] rounded-xl shadow-2xl border border-[#43454A] overflow-hidden animate-slide-up">
+                    <div class="p-6 font-mono text-[14px] leading-relaxed text-[#A9B7C6]">
+
+                        <div class="bg-yellow-500/20 -mx-6 px-6 py-2 mb-4 border-l-4 border-yellow-500 text-yellow-400 font-bold">
+                            {% for product in products %}
+                        </div>
+
+                        <span class="code-comment">&lt;!-- Mahsulot kartochkasi --&gt;</span><br>
+                        <span class="code-bracket">&lt;</span><span class="text-front-blue">div</span> <span class="text-green-400">class</span><span class="code-bracket">=</span><span class="code-string">"product-card"</span><span class="code-bracket">&gt;</span><br>
+
+                        <div class="pl-8 mt-2 space-y-1">
+                            <span class="code-comment">&lt;!-- Rasm bazadan keladi (media folder) --&gt;</span><br>
+                            <span class="code-bracket">&lt;</span><span class="text-front-blue">img</span> <span class="text-green-400">src</span><span class="code-bracket">=</span><span class="code-string">"</span><span class="text-white">{{ product.image.url }}</span><span class="code-string">"</span><span class="code-bracket">&gt;</span><br><br>
+
+                            <span class="code-comment">&lt;!-- Nomi va Narxi --&gt;</span><br>
+                            <span class="code-bracket">&lt;</span><span class="text-front-blue">h4</span><span class="code-bracket">&gt;</span><span class="text-white">{{ product.title }}</span><span class="code-bracket">&lt;/</span><span class="text-front-blue">h4</span><span class="code-bracket">&gt;</span><br>
+                            <span class="code-bracket">&lt;</span><span class="text-front-blue">p</span><span class="code-bracket">&gt;</span><span class="text-white">{{ product.price }}</span> so'm<span class="code-bracket">&lt;/</span><span class="text-front-blue">p</span><span class="code-bracket">&gt;</span><br>
+                        </div>
+
+                        <span class="code-bracket">&lt;/</span><span class="text-front-blue">div</span><span class="code-bracket">&gt;</span><br>
+
+                        <div class="bg-yellow-500/20 -mx-6 px-6 py-2 mt-4 border-l-4 border-yellow-500 text-yellow-400 font-bold">
+                            {% empty %}
+                                &lt;p&gt;Hozircha mahsulotlar yo'q&lt;/p&gt;
+                            <br>{% endfor %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Slide 10: Independent Work 2 (Blog Page Dynamic) -->
+            <div class="slide bg-white">
+                <div class="text-center mb-8">
+                    <span class="bg-brand-orange text-white px-6 py-2 rounded-full font-bold tracking-widest text-sm shadow-md"><i class="fas fa-blog mr-2"></i> 9-QADAM: MUSTAQIL ISH 2</span>
+                    <h2 class="text-4xl font-black mt-4 text-brand-dark">Blog sahifasini bazaga ulash</h2>
+                    <p class="text-gray-500 mt-2 text-lg max-w-3xl mx-auto">"Mahsulotlar" sahifasida qilganimiz kabi, endi <code>blog.html</code> ni dinamik qiling. Bazadan ma'lumotlarni <code>{% for post in posts %}</code> bilan aylantirib oling.</p>
+                </div>
+
+                <!-- Blog Page Mockup based on uploaded image -->
+                <div class="bg-white px-8 py-10 rounded-2xl w-full max-w-5xl text-center shadow-[0_10px_40px_rgba(0,0,0,0.08)] border border-gray-100 animate-slide-up">
+                    <h3 class="text-[32px] font-black text-[#141b34] mb-2 tracking-tight">Texnologiyalar Olami</h3>
+                    <p class="text-gray-500 mb-10 text-[15px]">Texnika tanlash bo'yicha foydali maslahatlar va yangiliklar</p>
+
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 text-left">
+                        <!-- Blog Card 1 -->
+                        <div class="bg-white rounded-[20px] overflow-hidden shadow-[0_4px_20px_rgba(0,0,0,0.05)] border border-gray-100 flex flex-col group">
+                            <div class="h-48 bg-[#A8E6CF] relative overflow-hidden flex items-center justify-center">
+                                <div class="absolute inset-0 bg-black/10"></div>
+                                <i class="fas fa-cube text-6xl text-white opacity-80 group-hover:scale-110 transition-transform duration-500"></i>
+                            </div>
+                            <div class="p-6 flex-1 flex flex-col">
+                                <div class="flex gap-4 text-[11px] text-[#4338ca] font-bold mb-4 tracking-wider">
+                                    <span><i class="far fa-calendar-alt"></i> 15 MART, 2026</span>
+                                    <span><i class="fas fa-user-edit"></i> TEXNOBLOG</span>
+                                </div>
+                                <h4 class="text-xl font-bold text-[#141b34] mb-3 leading-snug">Uyingiz uchun qanday muzlatkich tanlash kerak?</h4>
+                                <p class="text-[14px] text-gray-500 mb-6 flex-1 leading-relaxed">No Frost va Defrost tizimlarining farqi, energiya tejamkorligi va sig'im bo'yicha maslahatlar...</p>
+                                <a href="#" class="text-[#141b34] font-bold text-[14px] border-b-[2px] border-[#e88147] inline-block self-start pb-1 hover:text-[#e88147] transition-colors">O'qishni davom ettirish &rarr;</a>
+                            </div>
+                        </div>
+
+                        <!-- Blog Card 2 -->
+                        <div class="bg-white rounded-[20px] overflow-hidden shadow-[0_4px_20px_rgba(0,0,0,0.05)] border border-gray-100 flex flex-col group">
+                            <div class="h-48 bg-[#2d4a46] relative overflow-hidden flex items-center justify-center">
+                                <i class="fab fa-apple text-6xl text-white opacity-80 group-hover:scale-110 transition-transform duration-500"></i>
+                            </div>
+                            <div class="p-6 flex-1 flex flex-col">
+                                <div class="flex gap-4 text-[11px] text-[#4338ca] font-bold mb-4 tracking-wider">
+                                    <span><i class="far fa-calendar-alt"></i> 12 MART, 2026</span>
+                                    <span><i class="fas fa-user-edit"></i> IT EKSPERT</span>
+                                </div>
+                                <h4 class="text-xl font-bold text-[#141b34] mb-3 leading-snug">2026 yilning eng zo'r smartfonlari reytingi</h4>
+                                <p class="text-[14px] text-gray-500 mb-6 flex-1 leading-relaxed">Kamera, protsessor va batareya quvvati bo'yicha yetakchi bo'lgan eng yaxshi flagman smartfonlar ro'yxati.</p>
+                                <a href="#" class="text-[#141b34] font-bold text-[14px] border-b-[2px] border-[#e88147] inline-block self-start pb-1 hover:text-[#e88147] transition-colors">O'qishni davom ettirish &rarr;</a>
+                            </div>
+                        </div>
+
+                        <!-- Blog Card 3 -->
+                        <div class="bg-white rounded-[20px] overflow-hidden shadow-[0_4px_20px_rgba(0,0,0,0.05)] border border-gray-100 flex flex-col group">
+                            <div class="h-48 bg-blue-900 relative overflow-hidden flex items-center justify-center">
+                                <i class="fas fa-tv text-6xl text-blue-200 opacity-80 group-hover:scale-110 transition-transform duration-500"></i>
+                            </div>
+                            <div class="p-6 flex-1 flex flex-col">
+                                <div class="flex gap-4 text-[11px] text-[#4338ca] font-bold mb-4 tracking-wider">
+                                    <span><i class="far fa-calendar-alt"></i> 10 MART, 2026</span>
+                                    <span><i class="fas fa-user-edit"></i> BIR ZUMDA MEDIA</span>
+                                </div>
+                                <h4 class="text-xl font-bold text-[#141b34] mb-3 leading-snug">Smart TV xarid qilishda nimalarga e'tibor berish lozim?</h4>
+                                <p class="text-[14px] text-gray-500 mb-6 flex-1 leading-relaxed">OLED, QLED va LED texnologiyalari haqida batafsil tushuntirish va to'g'ri tanlov sirlari.</p>
+                                <a href="#" class="text-[#141b34] font-bold text-[14px] border-b-[2px] border-[#e88147] inline-block self-start pb-1 hover:text-[#e88147] transition-colors">O'qishni davom ettirish &rarr;</a>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Pagination based on image -->
+                    <div class="flex justify-center items-center gap-3 mt-12">
+                        <button class="w-10 h-10 rounded-lg bg-[#4338ca] text-white font-bold flex items-center justify-center shadow-md">1</button>
+                        <button class="w-10 h-10 rounded-lg border border-gray-200 text-gray-700 bg-white hover:bg-gray-50 font-bold flex items-center justify-center transition-colors">2</button>
+                        <button class="w-10 h-10 rounded-lg border border-gray-200 text-gray-700 bg-white hover:bg-gray-50 flex items-center justify-center transition-colors"><i class="fas fa-chevron-right text-sm"></i></button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Slide 11: Homework (Updated Tasks) -->
+            <div class="slide bg-slate-900 text-white relative">
+                <div class="absolute inset-0 bg-brand-blue/10 bg-grid-pattern"></div>
+
+                <div class="text-center mb-10 relative z-10 mt-6">
+                    <span class="bg-red-500 text-white px-6 py-2 rounded-full font-black tracking-widest text-sm shadow-[0_0_20px_rgba(239,68,68,0.5)]"><i class="fas fa-tasks mr-2"></i> 10-QADAM: UY ISHI (HOMEWORK)</span>
+                    <h2 class="text-4xl md:text-5xl font-black mt-6 text-white mb-4">Loyihani to'liq yakunlash!</h2>
+                    <p class="text-gray-400 text-lg max-w-2xl mx-auto">Quyidagi vazifalarni to'liq bajarib, orqada qolgan joylarni yopib kelish talab etiladi.</p>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-8 w-full max-w-6xl relative z-10 animate-slide-up" style="animation-delay: 0.2s;">
+
+                    <!-- Task 1: Repeat 3 times -->
+                    <div class="bg-[#1E2433] border border-[#2D3548] p-8 rounded-2xl hover:-translate-y-2 transition-transform duration-300 shadow-xl group">
+                        <div class="w-14 h-14 bg-blue-500/20 text-blue-400 rounded-xl flex items-center justify-center text-2xl mb-6 group-hover:scale-110 group-hover:rotate-180 transition-all duration-500"><i class="fas fa-sync-alt"></i></div>
+                        <h3 class="font-bold text-2xl mb-3 text-white">1. Qaytarish (3 marta)</h3>
+                        <p class="text-[15px] text-gray-400 mb-6 leading-relaxed">Shu darsgacha yozilgan **barcha kodlarimizni** noldan boshlab kamida 3 marta yozib, qo'lni kelishtiring.</p>
+                        <div class="bg-[#111827] px-4 py-3 rounded-lg text-sm text-blue-300 font-mono border border-blue-900/50 group-hover:border-blue-500 transition-colors"><i class="fas fa-file-archive mr-2"></i> Yakuniy natijani <b>.zip</b> qilib mentorga yuboring.</div>
+                    </div>
+
+                    <!-- Task 2: Static & Links -->
+                    <div class="bg-[#1E2433] border border-[#2D3548] p-8 rounded-2xl hover:-translate-y-2 transition-transform duration-300 shadow-xl group">
+                        <div class="w-14 h-14 bg-purple-500/20 text-purple-400 rounded-xl flex items-center justify-center text-2xl mb-6 group-hover:scale-110 transition-transform duration-300"><i class="fas fa-link"></i></div>
+                        <h3 class="font-bold text-2xl mb-3 text-white">2. Static & Bog'lanish</h3>
+                        <p class="text-[15px] text-gray-400 mb-6 leading-relaxed">Barcha sahifalar (biz haqimizda, aloqa, blog) ning <b>static</b> fayllarini ulab dizaynini tiklang.</p>
+                        <div class="bg-[#111827] px-4 py-3 rounded-lg text-sm text-purple-300 font-mono border border-purple-900/50 group-hover:border-purple-500 transition-colors"><i class="fas fa-exclamation-triangle mr-2 text-yellow-500"></i> Barcha page'lar Navbar'da bir-biriga <code>{% url %}</code> orqali ulansin!</div>
+                    </div>
+
+                    <!-- Task 3: Contact form POST -->
+                    <div class="bg-[#1E2433] border border-[#2D3548] p-8 rounded-2xl hover:-translate-y-2 transition-transform duration-300 shadow-xl relative overflow-hidden group">
+                        <div class="absolute -right-4 -top-4 text-7xl text-brand-orange/5 group-hover:-translate-y-2 group-hover:translate-x-2 transition-all duration-500"><i class="fas fa-database"></i></div>
+                        <div class="w-14 h-14 bg-orange-500/20 text-brand-orange rounded-xl flex items-center justify-center text-2xl mb-6 relative z-10 group-hover:scale-110 transition-transform duration-300"><i class="fas fa-database"></i></div>
+                        <h3 class="font-bold text-2xl mb-3 text-white relative z-10">3. Aloqa Formasi</h3>
+                        <p class="text-[15px] text-gray-400 mb-6 relative z-10 leading-relaxed"><code>aloqa.html</code> sahifasidagi xabar yuborish formasi ishlab, <b>Database (Baza) da saqlanadigan</b> bo'lishi shart.</p>
+                        <div class="bg-[#111827] px-4 py-3 rounded-lg text-sm text-orange-300 font-mono border border-orange-900/50 relative z-10 group-hover:border-orange-500 transition-colors"><i class="fas fa-check-circle mr-2"></i> POST metod va <code>{% csrf_token %}</code> qo'shing.</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Slide 12: Conclusion -->
+            <div class="slide bg-white text-center">
+                <div class="relative w-48 h-48 mx-auto mb-8 mt-10">
+                    <div class="absolute inset-0 bg-brand-orange/20 rounded-full animate-pulse blur-xl"></div>
+                    <div class="absolute inset-2 bg-gradient-to-br from-brand-orange to-brand-blue rounded-full shadow-[0_0_40px_rgba(37,99,235,0.3)] flex items-center justify-center border-4 border-white transform hover:scale-105 transition-transform duration-500 z-10">
+                        <i class="fas fa-code text-6xl text-white"></i>
+                    </div>
+                </div>
+
+                <h1 class="text-5xl font-black mb-4 text-brand-dark uppercase tracking-tight">Barakalla!</h1>
+                <p class="text-lg text-gray-500 max-w-2xl mx-auto mb-10">
+                    Siz <b>Bir Zumda</b> E-commerce loyihasini Django Backendiga muvaffaqiyatli uladingiz. Uy ishlarini tugatgach, loyiha to'liq dinamik holatga keladi!
+                </p>
+
+                <button id="btn-restart" class="bg-brand-blue text-white px-8 py-3.5 rounded-full font-bold uppercase tracking-wider hover:bg-blue-700 transition-colors shadow-lg shadow-blue-500/30 flex items-center gap-2 mx-auto">
+                    <i class="fas fa-redo-alt"></i> Boshidan Ko'rish
+                </button>
+            </div>
+
+        </div>
+    </main>
+
+    <!-- JS Logic -->
+    <script>
+        (function() {
+            let currentSlide = 0;
+            const wrapper = document.getElementById('slidesWrapper');
+            const counter = document.getElementById('slide-counter');
+            const total = document.querySelectorAll('.slide').length;
+
+            function update() {
+                wrapper.style.transform = `translateX(-${currentSlide * 100}%)`;
+                counter.innerText = `${currentSlide + 1} / ${total}`;
+
+                // Re-trigger animations
+                const currentSlideEl = document.querySelectorAll('.slide')[currentSlide];
+                const animatedEls = currentSlideEl.querySelectorAll('.animate-slide-up');
+                animatedEls.forEach(el => {
+                    el.style.animation = 'none';
+                    void el.offsetWidth; // Trigger reflow
+                    el.style.animation = null;
+                });
+            }
+
+            function nextSlide() { if(currentSlide < total - 1) { currentSlide++; update(); } }
+            function prevSlide() { if(currentSlide > 0) { currentSlide--; update(); } }
+
+            document.getElementById('btn-next').addEventListener('click', nextSlide);
+            document.getElementById('btn-prev').addEventListener('click', prevSlide);
+            document.getElementById('btn-restart').addEventListener('click', () => { currentSlide = 0; update(); });
+
+            document.addEventListener('keydown', (e) => {
+                if(e.key === 'ArrowRight' || e.key === ' ') nextSlide();
+                if(e.key === 'ArrowLeft') prevSlide();
+            });
+
+            let touchStartX = 0;
+            const touchArea = document.getElementById('touchArea');
+            touchArea.addEventListener('touchstart', e => touchStartX = e.changedTouches[0].screenX, {passive: true});
+            touchArea.addEventListener('touchend', e => {
+                let touchEndX = e.changedTouches[0].screenX;
+                if (touchStartX - touchEndX > 50) nextSlide();
+                if (touchEndX - touchStartX > 50) prevSlide();
+            }, {passive: true});
+
+            update();
+        })();
+
+        // Copy settings.py code function
+        function copyCode() {
+            const code = "import os\n\n# Static files (CSS, JavaScript, Images)\nSTATIC_URL = 'static/'\nSTATICFILES_DIRS = [os.path.join(BASE_DIR, 'static')]\n\n# Media files\nMEDIA_URL = 'media/'\nMEDIA_ROOT = os.path.join(BASE_DIR, 'media')";
+
+            navigator.clipboard.writeText(code).then(() => {
+                const toast = document.getElementById('copy-toast');
+                toast.style.opacity = '1';
+                setTimeout(() => { toast.style.opacity = '0'; }, 2000);
+            });
+        }
+    </script>
+</body>
+</html>
