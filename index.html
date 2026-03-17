@@ -676,7 +676,7 @@
 
         // Copy settings.py code function
         function copyCode() {
-            const code = "import os\n\n# Static files (CSS, JavaScript, Images)\nSTATIC_URL = 'static/'\nSTATICFILES_DIRS = [os.path.join(BASE_DIR, 'static')]\n\n# Media files\nMEDIA_URL = 'media/'\nMEDIA_ROOT = os.path.join(BASE_DIR, 'media')";
+            const code = "import os\n\n# Static files (CSS, JavaScript, Images)\nSTATIC_URL = 'static/'\nSTATIC_ROOT = os.path.join(BASE_DIR, 'static')\n\n# Media files\nMEDIA_URL = 'media/'\nMEDIA_ROOT = os.path.join(BASE_DIR, 'media')";
 
             navigator.clipboard.writeText(code).then(() => {
                 const toast = document.getElementById('copy-toast');
